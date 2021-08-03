@@ -52,6 +52,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 alertSpeedArray: [40, 80, 90],
                 alertColorArray: [Colors.orange, Colors.indigo, Colors.red],
                 duration: Duration(seconds: 6),
+                minMaxSpeedFractionDigits: 0, // new Added
+                minMaxSpeedInKilo: true,  // new Added
+                minMaxSpeedInKiloLimit: 10000, // new Added
               ),
             )
           ],

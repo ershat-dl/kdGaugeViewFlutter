@@ -1,8 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'dart:math' as math;
 
 class KdGaugeView extends StatefulWidget {
   final double speed;
@@ -14,6 +14,10 @@ class KdGaugeView extends StatefulWidget {
   final double minSpeed;
   final double maxSpeed;
   final TextStyle minMaxTextStyle;
+
+  final int? minMaxSpeedFractionDigits;
+  final bool minMaxSpeedInKilo;
+  final double minMaxSpeedInKiloLimit;
 
   final List<double> alertSpeedArray;
   final List<Color> alertColorArray;
@@ -35,49 +39,52 @@ class KdGaugeView extends StatefulWidget {
 
   final Widget? child;
 
-  KdGaugeView(
-      {GlobalKey? key,
-      this.speed = 0,
-      this.speedTextStyle = const TextStyle(
-        color: Colors.black,
-        fontSize: 60,
-        fontWeight: FontWeight.bold,
-      ),
-      this.unitOfMeasurement = 'Km/Hr',
-      this.unitOfMeasurementTextStyle = const TextStyle(
-        color: Colors.black,
-        fontSize: 30,
-        fontWeight: FontWeight.w600,
-      ),
-      required this.minSpeed,
-      required this.maxSpeed,
-      this.minMaxTextStyle = const TextStyle(
-        color: Colors.black,
-        fontSize: 20,
-      ),
-      this.alertSpeedArray = const [],
-      this.alertColorArray = const [],
-      this.gaugeWidth = 10,
-      this.baseGaugeColor = Colors.transparent,
-      this.inactiveGaugeColor = Colors.black87,
-      this.activeGaugeColor = Colors.green,
-      this.innerCirclePadding = 30,
-      this.divisionCircleColors = Colors.blue,
-      this.subDivisionCircleColors = Colors.blue,
-      this.animate = false,
-      this.duration = const Duration(milliseconds: 400),
-      this.fractionDigits = 0,
-      this.child,
-      this.activeGaugeGradientColor})
-      : assert(alertSpeedArray.length == alertColorArray.length,
+  KdGaugeView({
+    GlobalKey? key,
+    this.speed = 0,
+    this.speedTextStyle = const TextStyle(
+      color: Colors.black,
+      fontSize: 60,
+      fontWeight: FontWeight.bold,
+    ),
+    this.unitOfMeasurement = 'Km/Hr',
+    this.unitOfMeasurementTextStyle = const TextStyle(
+      color: Colors.black,
+      fontSize: 30,
+      fontWeight: FontWeight.w600,
+    ),
+    required this.minSpeed,
+    required this.maxSpeed,
+    this.minMaxTextStyle = const TextStyle(
+      color: Colors.black,
+      fontSize: 20,
+    ),
+    this.alertSpeedArray = const [],
+    this.alertColorArray = const [],
+    this.gaugeWidth = 10,
+    this.baseGaugeColor = Colors.transparent,
+    this.inactiveGaugeColor = Colors.black87,
+    this.activeGaugeColor = Colors.green,
+    this.innerCirclePadding = 30,
+    this.divisionCircleColors = Colors.blue,
+    this.subDivisionCircleColors = Colors.blue,
+    this.animate = false,
+    this.duration = const Duration(milliseconds: 400),
+    this.fractionDigits = 0,
+    this.child,
+    this.activeGaugeGradientColor,
+    this.minMaxSpeedFractionDigits,
+    this.minMaxSpeedInKilo = false,
+    this.minMaxSpeedInKiloLimit = 10000,
+  })  : assert(alertSpeedArray.length == alertColorArray.length,
             'Alert speed array length should be equal to Alert Speed Color Array length'),
         super(key: key);
+
   @override
   KdGaugeViewState createState() => KdGaugeViewState(speed, animate);
 }
 
-class KdGaugeViewState extends State<KdGaugeView>
-    with SingleTickerProviderStateMixin {
+class KdGaugeViewState extends State<KdGaugeView> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -107,8 +114,7 @@ class KdGaugeViewState extends State<KdGaugeView>
     _animation = Tween(begin: 0.0, end: 1.0).animate(_controller)
       ..addListener(() {
         setState(() {
-          _gaugeMarkSpeed =
-              lastMarkSpeed + (_speed - lastMarkSpeed) * _animation.value;
+          _gaugeMarkSpeed = lastMarkSpeed + (_speed - lastMarkSpeed) * _animation.value;
         });
       })
       ..addStatusListener((status) {
@@ -147,7 +153,10 @@ class KdGaugeViewState extends State<KdGaugeView>
           widget.divisionCircleColors,
           widget.subDivisionCircleColors,
           widget.fractionDigits,
-          widget.activeGaugeGradientColor),
+          widget.activeGaugeGradientColor,
+          widget.minMaxSpeedFractionDigits,
+          widget.minMaxSpeedInKilo,
+          widget.minMaxSpeedInKiloLimit),
       child: widget.child ?? Container(),
     );
   }
@@ -180,6 +189,10 @@ class _KdGaugeCustomPainter extends CustomPainter {
   final double minSpeed;
   final double maxSpeed;
   final TextStyle minMaxTextStyle;
+
+  final int? minMaxSpeedFractionDigits;
+  final bool minMaxSpeedInKilo;
+  final double minMaxSpeedInKiloLimit;
 
   final List<double> alertSpeedArray;
   final List<Color> alertColorArray;
@@ -219,7 +232,11 @@ class _KdGaugeCustomPainter extends CustomPainter {
       this.subDivisionCircleColors,
       this.divisionCircleColors,
       this.fractionDigits,
-      this.activeGaugeGradientColor);
+      this.activeGaugeGradientColor,
+      this.minMaxSpeedFractionDigits,
+      this.minMaxSpeedInKilo,
+      this.minMaxSpeedInKiloLimit);
+
   @override
   void paint(Canvas canvas, Size size) {
     //get the center of the view
@@ -341,8 +358,10 @@ class _KdGaugeCustomPainter extends CustomPainter {
   }
 
   void _drawMinText(Canvas canvas, Size size) {
-    TextSpan span = new TextSpan(
-        style: minMaxTextStyle, text: minSpeed.toStringAsFixed(fractionDigits));
+    String text;
+    text = _getSpeedText(minSpeed, useKilo: minMaxSpeedInKilo);
+
+    TextSpan span = new TextSpan(style: minMaxTextStyle, text: text);
     TextPainter textPainter = TextPainter(
       text: span,
       textDirection: TextDirection.ltr,
@@ -361,8 +380,10 @@ class _KdGaugeCustomPainter extends CustomPainter {
   }
 
   void _drawMaxText(Canvas canvas, Size size) {
-    TextSpan span = new TextSpan(
-        style: minMaxTextStyle, text: maxSpeed.toStringAsFixed(fractionDigits));
+    String text;
+    text = _getSpeedText(maxSpeed, useKilo: minMaxSpeedInKilo);
+
+    TextSpan span = new TextSpan(style: minMaxTextStyle, text: text);
     TextPainter textPainter = TextPainter(
       text: span,
       textDirection: TextDirection.ltr,
@@ -426,4 +447,26 @@ class _KdGaugeCustomPainter extends CustomPainter {
   }
 
   static num degToRad(num deg) => deg * (math.pi / 180.0);
+
+  String _toKilo(double value) {
+    String kiloValue;
+    if (value >= minMaxSpeedInKiloLimit) {
+      kiloValue = (value / 1000).toStringAsFixed(0);
+      kiloValue += ' k';
+    } else {
+      kiloValue = value.toStringAsFixed(minMaxSpeedFractionDigits ?? fractionDigits);
+    }
+    return kiloValue;
+  }
+
+  String _getSpeedText(double speed, {bool useKilo = false}) {
+    String text;
+    if (useKilo == true) {
+      text = _toKilo(speed);
+    } else {
+      text = speed.toStringAsFixed(minMaxSpeedFractionDigits ?? fractionDigits);
+    }
+
+    return text;
+  }
 }
