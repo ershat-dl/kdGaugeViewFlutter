@@ -46,7 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
               padding: EdgeInsets.all(10),
               child: KdGaugeView(
                 minSpeed: 0,
-                maxSpeed: 100,
+                maxSpeed: 2000,
                 speed: 120,
                 animate: true,
                 alertSpeedArray: [40, 80, 90],
@@ -54,7 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 duration: Duration(seconds: 6),
                 minMaxSpeedFractionDigits: 0, // new Added
                 minMaxSpeedInKilo: true,  // new Added
-                minMaxSpeedInKiloLimit: 10000, // new Added
+                minMaxSpeedInKiloLimit: 1000, // new Added
               ),
             )
           ],
